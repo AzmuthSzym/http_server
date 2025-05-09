@@ -1,0 +1,25 @@
+# Binary files
+*.exe
+*.obj
+*.o
+*.ilk
+*.pdb
+
+# VS Code specific
+.vscode/
+
+# Build directories
+build/
+bin/
+obj/
+
+# Visual Studio temporary files
+*.tlog
+*.log
+*.manifest
+
+# IDE files (if using VS)
+*.sln
+*.vcxproj
+*.vcxproj.user
+*.vcxproj.filters
