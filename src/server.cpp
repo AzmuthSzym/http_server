@@ -11,19 +11,6 @@ std::string createResponse(std::string content)
     return response;
 }
 
-std::string readRequest(SOCKET clientSocket) 
-{
-    char buffer[1024];
-    int bytesReceived = recv(clientSocket, buffer, sizeof(buffer) - 1, 0);
-    if (bytesReceived > 0) 
-    {
-        buffer[bytesReceived] = '\0';
-        printf("Received from browser:\n%s\n", buffer);
-        return std::string(buffer);
-    }
-    return "";
-}
-
 Server::Server(int port)
 {
     this->port = port;
@@ -111,7 +98,11 @@ bool Server::start()
         }
 
         std::string request = readRequest(ClientSocket);
-        std::string response = createResponse("Hello World!");
+        
+        HttpRequest parsedRequest = parseRequest(request);
+        std::string content = handleRequest(parsedRequest);
+        std::string response = createResponse(content);
+
         send(ClientSocket, response.c_str(), response.length(), 0);
 
         closesocket(ClientSocket);
