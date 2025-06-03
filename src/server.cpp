@@ -1,57 +1,83 @@
-#include <iostream>
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#include <stdio.h>
+#include "server.h"
 
-#pragma comment(lib, "Ws2_32.lib")
+std::string createResponse(std::string content) 
+{
+    std::string response = "HTTP/1.1 200 OK\r\n"
+                          "Content-Type: text/html\r\n"
+                          "Content-Length: " + std::to_string(content.length()) + "\r\n"
+                          "Connection: close\r\n"
+                          "Cache-Control: no-cache\r\n"
+                          "\r\n" + content;
+    return response;
+}
 
-#define DEFAULT_PORT 27015
+std::string readRequest(SOCKET clientSocket) 
+{
+    char buffer[1024];
+    int bytesReceived = recv(clientSocket, buffer, sizeof(buffer) - 1, 0);
+    if (bytesReceived > 0) 
+    {
+        buffer[bytesReceived] = '\0';
+        printf("Received from browser:\n%s\n", buffer);
+        return std::string(buffer);
+    }
+    return "";
+}
 
-int main() {
+Server::Server(int port)
+{
+    this->port = port;
+    listenSocket = INVALID_SOCKET;
+    running = false;
     // 1. Initialize Winsock first
     WSADATA wsaData;
+    
     int iResult;
 
     iResult = WSAStartup(MAKEWORD(2,2), &wsaData);
     if(iResult != 0)
     {
         printf("WSAStartup failed: %d\n", iResult);
-        return 1;
+        wsaInitialized = false;
     }
     else 
     {
         printf("WSAStartup successful\n");
+        wsaInitialized = true;
     }
-    
-    // 2. Create a socket
-    SOCKET ListenSocket = INVALID_SOCKET;
-    ListenSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+}
 
-    if(ListenSocket == INVALID_SOCKET) 
+bool Server::start()
+{
+    int iResult;
+    // 2. Create a socket
+    listenSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+
+    if(listenSocket == INVALID_SOCKET) 
     {
         printf("Error at socket() initalization: %ld\n", WSAGetLastError());
-        WSACleanup();
-        return 1;
+        reset();
+        return false;
     }
     else
     {
         printf("Socket creation successful\n");
     }
 
-    // 3. Set up server address (port 8080)
+    // 3. Set up server address
     sockaddr_in serverAddress;
     serverAddress.sin_family = AF_INET;
-    serverAddress.sin_port = htons(DEFAULT_PORT); // DEFAULT_PORT = 27015
-    serverAddress.sin_addr.s_addr = htonl(INADDR_ANY);
+    serverAddress.sin_port = htons(this->port);
+    serverAddress.sin_addr.s_addr = INADDR_ANY;
 
     // 4. Bind socket to address
-    iResult = bind(ListenSocket, (sockaddr*)&serverAddress, sizeof(serverAddress));
+    iResult = bind(listenSocket, (sockaddr*)&serverAddress, sizeof(serverAddress));
 
     if(iResult != 0)
     {
         printf("Socked binding error: %d\n", WSAGetLastError());
-        WSACleanup();
-        return 1;
+        reset();
+        return false;
     }
     else
     {
@@ -59,12 +85,12 @@ int main() {
     }
 
     // 5. Listen for connections
-    iResult = listen(ListenSocket, SOMAXCONN);
+    iResult = listen(listenSocket, SOMAXCONN);
         if(iResult != 0)
     {
         printf("Listening for connections error: %d\n", WSAGetLastError());
-        WSACleanup();
-        return 1;
+        reset();
+        return false;
     }
 
     // 6. Accept loop
@@ -73,37 +99,47 @@ int main() {
     int clientAddrSize = sizeof(clientAddress);
 
     printf("Starting accept loop...\n");
-    while (true) 
+    running = true;
+    while (running) 
     {
-        printf("Waiting for connection...\n");  // Add this too
+        printf("Waiting for connection...\n");
 
-        ClientSocket = accept(ListenSocket, (sockaddr*)&clientAddress, &clientAddrSize);
+        ClientSocket = accept(listenSocket, (sockaddr*)&clientAddress, &clientAddrSize);
         if (ClientSocket == INVALID_SOCKET) {
             printf("Accept failed: %d\n", WSAGetLastError());
             continue; // Try to accept the next connection, for learning
         }
 
-        char buffer[1024];
-        int bytesReceived = recv(ClientSocket, buffer, sizeof(buffer) - 1, 0);
-        if (bytesReceived > 0) {
-            buffer[bytesReceived] = '\0';
-            printf("Received from browser:\n%s\n", buffer);
-        
-        }
-        //char* message = "Hello from the server!\n";
-        //char* message = "HTTP/1.1 200 OK\r\nConnection: close\r\n\r\nHello World!";
-        char* message = "HTTP/1.1 200 OK\r\n"
-                "Content-Type: text/html\r\n"
-                "Content-Length: 12\r\n"
-                "Connection: close\r\n"
-                "Cache-Control: no-cache\r\n"
-                "\r\n"
-                "Hello World!";
-        send(ClientSocket, message, strlen(message), 0);
+        std::string request = readRequest(ClientSocket);
+        std::string response = createResponse("Hello World!");
+        send(ClientSocket, response.c_str(), response.length(), 0);
 
         closesocket(ClientSocket);
     }
-    
-    // 7. Cleanup
-    return 0;
+    return true;
+}
+
+void Server::reset()
+{
+    closesocket(listenSocket);
+    listenSocket = INVALID_SOCKET;
+}
+
+void Server::stop()
+{
+    running = false;
+}
+
+Server::~Server()
+{
+    if (listenSocket != INVALID_SOCKET) 
+    {
+        closesocket(listenSocket);
+        listenSocket = INVALID_SOCKET;
+    }
+    if(wsaInitialized)
+    {
+        WSACleanup();
+        wsaInitialized = false;
+    }
 }
