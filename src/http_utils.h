@@ -3,18 +3,26 @@
 
 #include <string>
 #include <winsock2.h>
+#include <map>
 
 
 struct HttpRequest {
     std::string method;
     std::string path; 
     std::string version;
+    std::map<std::string, std::string> queryParams;
+};
+
+struct ResponseInfo {
+    std::string statusCode;
+    std::string content;
 };
 
 // Function declarations
 std::string readRequest(SOCKET clientSocket);
-std::string createResponse(std::string content);
+std::string createResponse(ResponseInfo content);
 HttpRequest parseRequest(std::string rawRequest);
-std::string handleRequest(HttpRequest request);
+ResponseInfo handleRequest(HttpRequest request);
+std::map<std::string, std::string> parseQueryString(const std::string& queryString);
 
 #endif

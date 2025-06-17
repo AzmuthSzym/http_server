@@ -1,16 +1,5 @@
 #include "server.h"
 
-std::string createResponse(std::string content) 
-{
-    std::string response = "HTTP/1.1 200 OK\r\n"
-                          "Content-Type: text/html\r\n"
-                          "Content-Length: " + std::to_string(content.length()) + "\r\n"
-                          "Connection: close\r\n"
-                          "Cache-Control: no-cache\r\n"
-                          "\r\n" + content;
-    return response;
-}
-
 Server::Server(int port)
 {
     this->port = port;
@@ -100,7 +89,7 @@ bool Server::start()
         std::string request = readRequest(ClientSocket);
         
         HttpRequest parsedRequest = parseRequest(request);
-        std::string content = handleRequest(parsedRequest);
+        ResponseInfo content = handleRequest(parsedRequest);
         std::string response = createResponse(content);
 
         send(ClientSocket, response.c_str(), response.length(), 0);
