@@ -15,7 +15,7 @@ std::string readRequest(SOCKET clientSocket)
 
 std::string createResponse(ResponseInfo responseInfo) 
 {
-    std::string response = "HTTP/1.1 " + responseInfo.statusCode + " OK\r\n"
+    std::string response = "HTTP/1.1 " + responseInfo.statusCode + "\r\n"
                           "Content-Type: text/html\r\n"
                           "Content-Length: " + std::to_string(responseInfo.content.length()) + "\r\n"
                           "Connection: close\r\n"
