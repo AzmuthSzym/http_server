@@ -8,13 +8,14 @@
 
 struct HttpRequest {
     std::string method;
-    std::string path; 
+    std::string path;
     std::string version;
     std::map<std::string, std::string> queryParams;
 };
 
 struct ResponseInfo {
     std::string statusCode;
+    std::string statusText;
     std::string content;
 };
 

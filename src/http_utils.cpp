@@ -15,7 +15,7 @@ std::string readRequest(SOCKET clientSocket)
 
 std::string createResponse(ResponseInfo responseInfo) 
 {
-    std::string response = "HTTP/1.1 " + responseInfo.statusCode + "\r\n"
+    std::string response = "HTTP/1.1 " + responseInfo.statusCode + responseInfo.statusText + "\r\n"
                           "Content-Type: text/html\r\n"
                           "Content-Length: " + std::to_string(responseInfo.content.length()) + "\r\n"
                           "Connection: close\r\n"
@@ -35,7 +35,19 @@ HttpRequest parseRequest(std::string rawRequest)
     size_t secondSpace = firstLine.find(' ', firstSpace + 1);
 
     request.method = firstLine.substr(0, firstSpace);
-    request.path = firstLine.substr(firstSpace + 1, secondSpace - firstSpace - 1);
+    std::string fullPath = firstLine.substr(firstSpace + 1, secondSpace - firstSpace - 1);
+    printf("DEBUG: fullPath = '%s'\n", fullPath.c_str());
+    if(fullPath.find('?') != std::string::npos)
+    {
+        request.path = fullPath.substr(0, fullPath.find('?'));
+        request.queryParams = parseQueryString(fullPath.substr(fullPath.find('?') + 1, fullPath.length() - 1));
+        printf("DEBUG: final request.path = '%s'\n", request.path.c_str());
+        printf("DEBUG: queryParams size = %zd\n", request.queryParams.size());
+    }
+    else
+    {
+        request.path = fullPath;
+    }
     request.version = firstLine.substr(secondSpace + 1);
 
     return request;
@@ -45,11 +57,11 @@ ResponseInfo handleRequest(HttpRequest request)
 {
     if(request.path == "/")
     {
-        return ResponseInfo{"200 OK", "Home Page"};
+        return ResponseInfo{"200", "OK", "Home Page"};
     }
     else if(request.path == "/about")
     {
-        return ResponseInfo{"200 OK", "About"};
+        return ResponseInfo{"200", "OK", "About"};
     }
     else if(request.path == "/search") 
     {
@@ -67,16 +79,17 @@ ResponseInfo handleRequest(HttpRequest request)
         }
         
         response += "</body></html>";
-        return ResponseInfo{"200 OK", response};
+        return ResponseInfo{"200", "OK", response};
     }
     else
     {
-        return ResponseInfo{"404 Not Found", "404 Not Found"};
+        return ResponseInfo{"404", "Not Found", "404 Not Found"};
     }
 }
 
 std::map<std::string, std::string> parseQueryString(const std::string& queryString) 
 {
+    printf("DEBUG: parseQueryString input = '%s'\n", queryString.c_str());
     std::map<std::string, std::string> params;
     if (queryString.empty())
     {
@@ -96,6 +109,7 @@ std::map<std::string, std::string> parseQueryString(const std::string& queryStri
             std::string key = pair.substr(0, equalPos);
             std::string value = pair.substr(equalPos + 1);
             params[key] = value;
+            printf("DEBUG: Adding param: '%s' = '%s'\n", key.c_str(), value.c_str());
         }
 
         if(end == std::string::npos) break;
