@@ -4,6 +4,10 @@
 #include <string>
 #include <winsock2.h>
 #include <map>
+#include <fstream>
+#include <sstream>
+#include <iostream>
+#include <filesystem>
 
 
 struct HttpRequest {
@@ -17,6 +21,7 @@ struct ResponseInfo {
     std::string statusCode;
     std::string statusText;
     std::string content;
+    std::string contentType;
 };
 
 // Function declarations
@@ -25,5 +30,9 @@ std::string createResponse(ResponseInfo content);
 HttpRequest parseRequest(std::string rawRequest);
 ResponseInfo handleRequest(HttpRequest request);
 std::map<std::string, std::string> parseQueryString(const std::string& queryString);
+std::string readFileContents(const std::string& filepath);
+std::string getMimeType(const std::string& filepath);
+ResponseInfo serveFile(const std::string& filepath);
+
 
 #endif

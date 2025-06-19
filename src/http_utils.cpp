@@ -16,7 +16,7 @@ std::string readRequest(SOCKET clientSocket)
 std::string createResponse(ResponseInfo responseInfo) 
 {
     std::string response = "HTTP/1.1 " + responseInfo.statusCode + responseInfo.statusText + "\r\n"
-                          "Content-Type: text/html\r\n"
+                          "Content-Type:" +responseInfo.contentType+"\r\n"
                           "Content-Length: " + std::to_string(responseInfo.content.length()) + "\r\n"
                           "Connection: close\r\n"
                           "Cache-Control: no-cache\r\n"
@@ -57,11 +57,11 @@ ResponseInfo handleRequest(HttpRequest request)
 {
     if(request.path == "/")
     {
-        return ResponseInfo{"200", "OK", "Home Page"};
+        return serveFile("../public/index.html");
     }
     else if(request.path == "/about")
     {
-        return ResponseInfo{"200", "OK", "About"};
+        return serveFile("../public/about.html");
     }
     else if(request.path == "/search") 
     {
@@ -79,11 +79,11 @@ ResponseInfo handleRequest(HttpRequest request)
         }
         
         response += "</body></html>";
-        return ResponseInfo{"200", "OK", response};
+        return ResponseInfo{"200", "OK", response, "text/html"};
     }
     else
     {
-        return ResponseInfo{"404", "Not Found", "404 Not Found"};
+        return ResponseInfo{"404", "Not Found", "404 Not Found", "text/plain"};
     }
 }
 
@@ -118,4 +118,51 @@ std::map<std::string, std::string> parseQueryString(const std::string& queryStri
     }
 
     return params;
+}
+
+std::string readFileContents(const std::string& filepath)
+{
+    std::ifstream file(filepath);
+    if(file.good())
+    {
+        auto size = std::filesystem::file_size(filepath);
+        std::string fileContents(size, '\0');
+        file.read(&fileContents[0], size);
+        return fileContents;
+    }
+    else
+    {
+        return "Error";
+    }
+}
+
+std::string getMimeType(const std::string& filepath)
+{
+    size_t pos = filepath.rfind('.');
+    if(pos != std::string::npos)
+    {
+        std::string extension = filepath.substr(pos, filepath.length() - 1);
+        if(extension == ".html") return "text/html";
+        else if(extension == ".css") return "text/css";
+        else if(extension == ".js") return "application/javascript";
+        else if(extension == ".png") return "image/png";
+        else if(extension == ".jpg") return "image/jpeg";
+        else return "text/plain";
+    }
+    else
+    {
+        return "Error";
+    }
+}
+
+ResponseInfo serveFile(const std::string& filepath)
+{
+    std::string fileContents = readFileContents(filepath);
+    if(fileContents != "Error")
+    {
+        std::string mimeType = getMimeType(filepath);
+        return ResponseInfo{"200", "OK", fileContents, mimeType};
+    }
+    return ResponseInfo{"404", "Not Found", "WRONG SERVER FILE", "text/plain"};
+    
 }
